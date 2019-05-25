@@ -5,6 +5,7 @@ using Magnetizing_FPG.Properties;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using System.Linq;
+using Grasshopper;
 
 namespace Magnetizing_FPG
 {
@@ -104,7 +105,7 @@ namespace Magnetizing_FPG
         {
             m_attributes = new RoomInstanceAttributes(this);
         }
-        
+
 
         /// <summary>
         /// This is the method that actually does the work.
@@ -116,8 +117,38 @@ namespace Magnetizing_FPG
 
             //AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, AdjacentRoomsList.Count.ToString());
 
+            GH_Document GrasshopperDocument = Instances.ActiveCanvas.Document;
+            List<String> nms = new List<string>();
+            nms.Add("ValueContainer"); //node name
+            List<IGH_DocumentObject> valueComp = GrasshopperDocument.FindObjects(nms, 1);
+            if (valueComp.Count != 0)
+            {
+                Guid instGUID = valueComp[0].InstanceGuid;
+                IGH_Component comp = GrasshopperDocument.FindComponent(instGUID);
+                int userListLen = comp.Params.Input[0].VolatileData.PathCount;
+                for (int i = 0; i < userListLen; i++)
+                {
+
+                    var roomIDFromNode = comp.Params.Input[0].VolatileData.get_Branch(i)[0].ToString();
+
+                    if (Convert.ToInt16(roomIDFromNode) == this.RoomId)
+                    {
+                        var roomNameFromNode = comp.Params.Input[0].VolatileData.get_Branch(i)[1].ToString();
+                        var roomAreaFromNode = comp.Params.Input[0].VolatileData.get_Branch(i)[2].ToString();
+                        bool roomIsEnabled = Convert.ToBoolean(comp.Params.Input[0].VolatileData.get_Branch(i)[3].ToString());
+
+                        RoomName = roomNameFromNode;
+                        RoomArea = Convert.ToDouble(roomAreaFromNode);
+                        if (roomIsEnabled == false) { this.Locked = true; }
+                        else { this.Locked = false; }
+                    }
+                }
+
+            }
+
             DA.SetData(0, RoomName);
         }
+
 
         /// <summary>
         /// Provides an Icon for the component.
